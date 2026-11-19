@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GUA Partners Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+  :root {
+    --member: #1f5fbf;
+    --contributor: #7a3fb0;
+    --teaching: #d9822b;
+    --text: #1d232b;
+    --muted: #5b6573;
+    --panel: #ffffff;
+    --border: #d9dde3;
+  }
+  html, body { height: 100%; margin: 0; }
+  body { font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); background: #fff; }
+  #map { position: absolute; inset: 0; }
+
+  /* Filter panel */
+  .filter {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; box-shadow: 0 1px 4px rgba(0,0,0,.12); min-width: 180px;
+  }
+  .filter h2 { font-size: 13px; margin: 0 0 6px; }
+  .filter label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
+  .filter .count { margin-left: auto; padding-left: 14px;color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); flex: none; }
+  .dot.member { background: var(--member); }
+  .dot.contributor { background: var(--contributor); }
+  .dot.teaching { background: var(--teaching); }
+  .filter input[type=search] {
+    width: 100%; box-sizing: border-box; margin-top: 8px; padding: 6px 8px;
+    border: 1px solid var(--border); border-radius: 6px; font: inherit;
+  }
+
+  /* Popups */
+  .popup h3 { margin: 0 0 2px; font-size: 15px; }
+  .popup .type { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .popup .type.member { color: var(--member); }
+  .popup .type.contributor { color: var(--contributor); }
+  .popup .type.teaching { color: var(--teaching); }
+  .popup p { margin: 6px 0 0; color: var(--muted); }
+  .popup a { color: var(--member); }
+
+  @media (max-width: 480px) {
+    .filter { min-width: 0; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+<div id="map" role="region" aria-label="Map of Global University Academy partners and teaching locations"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+/* ------------------------------------------------------------------
+   DATA — Global University Academy (GUA), from
+   globaluniversityacademy.org/about-us (checked 19 Nov 2026).
+   Pins mark each institution's main campus or headquarters
+   (approximate). `note` flags a location not stated by the organisation.
+   type: "member"      = member university
+         "contributor" = contributing partner
+         "teaching"    = teaching location (refugee camp)
+   ------------------------------------------------------------------ */
+const MEMBERS = [
+  ["Arizona State University", "Tempe, USA", 33.4242, -111.9281, "https://www.asu.edu"],
+  ["Al Hussein Technical University", "Amman, Jordan", 31.9820, 35.8360, "https://htu.edu.jo/"],
+  ["Bard College – Hubs for Connected Learning Initiatives", "Annandale-on-Hudson, USA", 42.0207, -73.9086, "https://hubs.bard.edu/"],
+  ["German Jordanian University", "Madaba, Jordan", 31.7766, 35.8016, "https://www.gju.edu.jo/"],
+  ["Gulu University", "Gulu, Uganda", 2.7837, 32.3006, "https://gu.ac.ug/"],
+  ["Humboldt University of Berlin", "Berlin, Germany", 52.5180, 13.3936, "https://www.hu-berlin.de/en"],
+  ["KU Leuven", "Leuven, Belgium", 50.8775, 4.7005, "https://www.kuleuven.be/english/kuleuven"],
+  ["Makerere University", "Kampala, Uganda", 0.3349, 32.5675, "https://www.mak.ac.ug/"],
+  ["Norwegian University of Life Sciences", "Ås, Norway", 59.6660, 10.7690, "https://www.nmbu.no/en/"],
+  ["Paris Sciences & Lettres University", "Paris, France", 48.8418, 2.3448, "https://psl.eu/en"],
+  ["SOAS, University of London", "London, UK", 51.5222, -0.1290, "https://www.soas.ac.uk/"],
+  ["Southern New Hampshire University", "Manchester, New Hampshire, USA", 43.0400, -71.4530, "https://www.snhu.edu/"],
+  ["Stellenbosch University", "Stellenbosch, South Africa", -33.9321, 18.8648, "https://www.su.ac.za/en"],
+  ["The Open University", "Milton Keynes, UK", 52.0250, -0.7090, "https://www.open.ac.uk/"],
+  ["University of Bergen", "Bergen, Norway", 60.3880, 5.3230, "https://www4.uib.no/en"],
+  ["University of Cape Town", "Cape Town, South Africa", -33.9577, 18.4612, "https://www.uct.ac.za/"],
+  ["UCLouvain", "Louvain-la-Neuve, Belgium", 50.6680, 4.6118, "https://uclouvain.be/en"],
+  ["University of Geneva", "Geneva, Switzerland", 46.1990, 6.1450, "https://www.unige.ch/en/"],
+  ["University of Groningen", "Groningen, Netherlands", 53.2194, 6.5630, "https://www.rug.nl/?lang=en"],
+  ["University of Hamburg", "Hamburg, Germany", 53.5670, 9.9840, "https://www.uni-hamburg.de/en.html"],
+  ["University of Oslo", "Oslo, Norway", 59.9400, 10.7220, "https://www.uio.no/english/index.html"],
+  ["University of Toronto", "Toronto, Canada", 43.6629, -79.3957, "https://www.utoronto.ca/"],
+];
+
+const CONTRIBUTORS = [
+  ["Norwegian Refugee Council", "Oslo, Norway", 59.9136, 10.7420, "https://www.nrc.no/"],
+  ["Norwegian Students and Academics International Assistance Fund (SAIH)", "Oslo, Norway", 59.9220, 10.7520, "https://www.saih.no/en"],
+  ["The Higher Education Alliance in Jordan", "Amman, Jordan", 31.9539, 35.9106, "https://www.unhcr.org/jo/news/jordan-new-alliance-allows-more-refugees-access-university-studies"],
+  ["Save the Children", "London, UK", 51.5096, -0.1300, "https://www.savethechildren.net/"],
+  ["UNESCO", "Paris, France", 48.8495, 2.3060, "https://www.unesco.org/en"],
+  ["UNHCR", "Geneva, Switzerland", 46.2270, 6.1390, "https://www.unhcr.org/"],
+  ["Na'amal", "United Kingdom", 51.5074, -0.1278, "https://naamal.org/", "UK social enterprise; its website gives no address, so this pin is approximate."],
+  ["Reallyenglish", "London, UK", 51.5205, -0.1440, "https://www.reallyenglish.com/"],
+];
+
+/* Teaching locations — refugee camps (approximate camp centres). */
+const TEACHING = [
+  ["Azraq refugee camp", "Zarqa Governorate, Jordan", 31.9050, 36.6160],
+  ["Za'atari refugee camp", "Mafraq Governorate, Jordan", 32.2950, 36.3260],
+  ["Kakuma refugee camp", "Turkana County, Kenya", 3.7300, 34.8500],
+  ["Cox's Bazar refugee camps", "Ukhiya, Cox's Bazar, Bangladesh", 21.2100, 92.1600, "", "Kutupalong–Balukhali camp area"],
+];
+
+const row = type => ([name, city, lat, lng, url = "", description = ""]) => ({ type, name, city, lat, lng, url, description });
+const LOCATIONS = [
+  ...MEMBERS.map(row("member")),
+  ...CONTRIBUTORS.map(row("contributor")),
+  ...TEACHING.map(row("teaching")),
+];
+
+const TYPES = {
+  member:      { label: "Member universities",   one: "Member university" },
+  contributor: { label: "Contributing partners", one: "Contributing partner" },
+  teaching:    { label: "Teaching locations",    one: "Teaching location" },
+};
+
+/* Optional URL params when embedding:
+   ?type=member | contributor | teaching   show only one category
+   ?cluster=0                 turn off marker clustering
+   ?scroll=1                  allow scroll-wheel zoom (off by default so the
+                              host page scrolls normally over the iframe)     */
+const params = new URLSearchParams(location.search);
+const onlyType = params.get("type");
+const useCluster = params.get("cluster") !== "0";
+
+const map = L.map("map", {
+  worldCopyJump: true,
+  scrollWheelZoom: params.get("scroll") === "1",
+  minZoom: 2,
+}).setView([20, 0], 2);
+
+// Esri basemap: no API key, and works from file:// and inside iframes
+// (OpenStreetMap's own tile servers return 403 without a referrer and
+// don't permit production use). For a commercial site at scale, Esri's
+// terms ask for a free ArcGIS Location Platform account — or swap in
+// MapTiler / Stadia / Mapbox with your own key.
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+  attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> — Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+  maxNativeZoom: 16, maxZoom: 19,
+}).addTo(map);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+  maxNativeZoom: 16, maxZoom: 19,
+  pane: "overlayPane",
+}).addTo(map);
+
+// Let users scroll-zoom after clicking into the map.
+map.on("click", () => map.scrollWheelZoom.enable());
+map.on("mouseout", () => { if (params.get("scroll") !== "1") map.scrollWheelZoom.disable(); });
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+function icon(type) {
+  return L.divIcon({
+    className: "",
+    html: `<span class="dot ${type}" style="width:16px;height:16px;display:block"></span>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10],
+  });
+}
+
+function popupHtml(loc) {
+  return `<div class="popup">
+    <div class="type ${loc.type}">${esc(TYPES[loc.type].one)}</div>
+    <h3>${esc(loc.name)}</h3>
+    ${loc.city ? `<div>${esc(loc.city)}</div>` : ""}
+    ${loc.description ? `<p>${esc(loc.description)}</p>` : ""}
+    ${loc.url ? `<p><a href="${esc(loc.url)}" target="_blank" rel="noopener">Website ↗</a></p>` : ""}
+  </div>`;
+}
+
+// One layer group per type
+const groups = {};
+const markers = [];
+for (const type of Object.keys(TYPES)) {
+  groups[type] = useCluster
+    ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40 })
+    : L.layerGroup();
+}
+
+for (const loc of LOCATIONS) {
+  if (!TYPES[loc.type]) continue;
+  const m = L.marker([loc.lat, loc.lng], { icon: icon(loc.type), title: loc.name, keyboard: true })
+    .bindPopup(popupHtml(loc));
+  m._loc = loc;
+  markers.push(m);
+}
+
+const state = { visible: new Set(onlyType && TYPES[onlyType] ? [onlyType] : Object.keys(TYPES)), q: "" };
+
+function render(fit) {
+  for (const g of Object.values(groups)) { g.clearLayers(); map.removeLayer(g); }
+  const q = state.q.toLowerCase();
+  const shown = [];
+  for (const m of markers) {
+    const l = m._loc;
+    if (!state.visible.has(l.type)) continue;
+    if (q && !`${l.name} ${l.city} ${l.description}`.toLowerCase().includes(q)) continue;
+    groups[l.type].addLayer(m);
+    shown.push(m.getLatLng());
+  }
+  for (const t of state.visible) groups[t].addTo(map);
+  if (fit && shown.length) fitTo(shown);
+}
+
+function fitTo(points, animate = true) {
+  const size = map.getSize();
+  if (!size.x || !size.y) return; // iframe not laid out yet; the ResizeObserver refits later
+  map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 6, animate });
+}
+
+// Filter / legend control
+const Filter = L.Control.extend({
+  options: { position: "topright" },
+  onAdd() {
+    const div = L.DomUtil.create("div", "filter");
+    const counts = Object.fromEntries(Object.keys(TYPES).map(t => [t, LOCATIONS.filter(l => l.type === t).length]));
+    div.innerHTML = `<h2>Show</h2>` +
+      Object.entries(TYPES).map(([t, cfg]) => `
+        <label><input type="checkbox" data-type="${t}" ${state.visible.has(t) ? "checked" : ""}>
+          <span class="dot ${t}"></span>${cfg.label}<span class="count">${counts[t]}</span></label>`).join("") +
+      `<input type="search" placeholder="Search name or city…" aria-label="Search locations">`;
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    div.addEventListener("change", e => {
+      const t = e.target.dataset.type;
+      if (!t) return;
+      e.target.checked ? state.visible.add(t) : state.visible.delete(t);
+      render(false);
+    });
+    div.querySelector("input[type=search]").addEventListener("input", e => {
+      state.q = e.target.value.trim();
+      render(!!state.q);
+    });
+    return div;
+  },
+});
+new Filter().addTo(map);
+
+render(false);
+
+// Fit to all markers once the iframe has a real size, and keep the map
+// correct when the host page resizes the iframe.
+let userMoved = false;
+for (const ev of ["mousedown", "touchstart", "wheel", "keydown"]) {
+  map.getContainer().addEventListener(ev, () => { userMoved = true; }, { passive: true });
+}
+new ResizeObserver(() => {
+  map.invalidateSize({ animate: false });
+  if (userMoved) return;
+  const pts = markers.filter(m => state.visible.has(m._loc.type)).map(m => m.getLatLng());
+  if (pts.length) fitTo(pts, false);
+}).observe(map.getContainer());
+</script>
+</body>
+</html>
