@@ -11,7 +11,6 @@
 <style>
   :root {
     --member: #1f5fbf;
-    --contributor: #7a3fb0;
     --teaching: #d9822b;
     --text: #1d232b;
     --muted: #5b6573;
@@ -32,7 +31,6 @@
   .filter .count { margin-left: auto; padding-left: 14px;color: var(--muted); font-variant-numeric: tabular-nums; }
   .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); flex: none; }
   .dot.member { background: var(--member); }
-  .dot.contributor { background: var(--contributor); }
   .dot.teaching { background: var(--teaching); }
   .filter input[type=search] {
     width: 100%; box-sizing: border-box; margin-top: 8px; padding: 6px 8px;
@@ -43,7 +41,6 @@
   .popup h3 { margin: 0 0 2px; font-size: 15px; }
   .popup .type { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
   .popup .type.member { color: var(--member); }
-  .popup .type.contributor { color: var(--contributor); }
   .popup .type.teaching { color: var(--teaching); }
   .popup p { margin: 6px 0 0; color: var(--muted); }
   .popup a { color: var(--member); }
@@ -63,11 +60,9 @@
 /* ------------------------------------------------------------------
    DATA — Global University Academy (GUA), from
    globaluniversityacademy.org/about-us (checked 19 Nov 2026).
-   Pins mark each institution's main campus or headquarters
-   (approximate). `note` flags a location not stated by the organisation.
-   type: "member"      = member university
-         "contributor" = contributing partner
-         "teaching"    = teaching location (refugee camp)
+   University pins mark each main campus (approximate).
+   type: "member"   = partner (member) university
+         "teaching" = teaching location
    ------------------------------------------------------------------ */
 const MEMBERS = [
   ["Arizona State University", "Tempe, USA", 33.4242, -111.9281, "https://www.asu.edu"],
@@ -94,40 +89,50 @@ const MEMBERS = [
   ["University of Toronto", "Toronto, Canada", 43.6629, -79.3957, "https://www.utoronto.ca/"],
 ];
 
-const CONTRIBUTORS = [
-  ["Norwegian Refugee Council", "Oslo, Norway", 59.9136, 10.7420, "https://www.nrc.no/"],
-  ["Norwegian Students and Academics International Assistance Fund (SAIH)", "Oslo, Norway", 59.9220, 10.7520, "https://www.saih.no/en"],
-  ["The Higher Education Alliance in Jordan", "Amman, Jordan", 31.9539, 35.9106, "https://www.unhcr.org/jo/news/jordan-new-alliance-allows-more-refugees-access-university-studies"],
-  ["Save the Children", "London, UK", 51.5096, -0.1300, "https://www.savethechildren.net/"],
-  ["UNESCO", "Paris, France", 48.8495, 2.3060, "https://www.unesco.org/en"],
-  ["UNHCR", "Geneva, Switzerland", 46.2270, 6.1390, "https://www.unhcr.org/"],
-  ["Na'amal", "United Kingdom", 51.5074, -0.1278, "https://naamal.org/", "UK social enterprise; its website gives no address, so this pin is approximate."],
-  ["Reallyenglish", "London, UK", 51.5205, -0.1440, "https://www.reallyenglish.com/"],
-];
-
-/* Teaching locations — refugee camps (approximate camp centres). */
+/* Teaching locations — one row per site (duplicates in the source list
+   removed). Coordinates are approximate: camp centre for camps, city
+   centre for cities. "Online" and "Multiple sites" rows have no single
+   place and are not mapped.
+   [site, "Country · Region", lat, lng, url, note] */
 const TEACHING = [
-  ["Azraq refugee camp", "Zarqa Governorate, Jordan", 31.9050, 36.6160],
-  ["Za'atari refugee camp", "Mafraq Governorate, Jordan", 32.2950, 36.3260],
-  ["Kakuma refugee camp", "Turkana County, Kenya", 3.7300, 34.8500],
-  ["Cox's Bazar refugee camps", "Ukhiya, Cox's Bazar, Bangladesh", 21.2100, 92.1600, "", "Kutupalong–Balukhali camp area"],
+  // Middle East
+  ["Azraq",       "Jordan · Middle East",           31.9050, 36.6160],
+  ["Zaatari",     "Jordan · Middle East",           32.2950, 36.3260],
+  ["Beirut",      "Lebanon · Middle East",          33.8938, 35.5018],
+  ["Tripoli",     "Lebanon · Middle East",          34.4367, 35.8497],
+  ["Bekaa",       "Lebanon · Middle East",          33.8463, 35.9020, "", "Bekaa Valley; pin at Zahle."],
+  ["Arsal",       "Lebanon · Middle East",          34.1786, 36.4194],
+  ["Gaziantep",   "Turkey · Middle East",           37.0662, 37.3833],
+  // Eastern & Southern Africa
+  ["Kakuma",      "Kenya · Eastern Africa",          3.7300, 34.8500],
+  ["Kalobeyei",   "Kenya · Eastern Africa",          3.7800, 34.7300],
+  ["Nairobi",     "Kenya · Eastern Africa",         -1.2921, 36.8219],
+  ["Kampala",     "Uganda · Eastern Africa",         0.3476, 32.5825],
+  ["Kigali",      "Rwanda · Eastern Africa",        -1.9441, 30.0619],
+  ["Kiziba",      "Rwanda · Eastern Africa",        -2.0900, 29.3500],
+  ["Dzaleka",     "Malawi · Eastern Africa",       -13.6600, 33.8700],
+  ["Cape Town",   "South Africa · Southern Africa", -33.9249, 18.4241],
+  // Central & West Africa
+  ["Iridimi",     "Chad · Central Africa",          15.0900, 22.2300, "", "Near Iriba; position approximate."],
+  ["Niamey",      "Niger · West Africa",            13.5116,  2.1254],
+  // Asia
+  ["Cox's Bazar", "Bangladesh · South Asia",        21.2100, 92.1600, "", "Kutupalong–Balukhali camp area."],
+  ["Mae Sot",     "Thailand · South-East Asia",     16.7130, 98.5740],
 ];
 
 const row = type => ([name, city, lat, lng, url = "", description = ""]) => ({ type, name, city, lat, lng, url, description });
 const LOCATIONS = [
   ...MEMBERS.map(row("member")),
-  ...CONTRIBUTORS.map(row("contributor")),
   ...TEACHING.map(row("teaching")),
 ];
 
 const TYPES = {
-  member:      { label: "Member universities",   one: "Member university" },
-  contributor: { label: "Contributing partners", one: "Contributing partner" },
-  teaching:    { label: "Teaching locations",    one: "Teaching location" },
+  member:   { label: "Partner universities", one: "Partner university" },
+  teaching: { label: "Teaching locations",   one: "Teaching location" },
 };
 
 /* Optional URL params when embedding:
-   ?type=member | contributor | teaching   show only one category
+   ?type=member | teaching   show only one category
    ?cluster=0                 turn off marker clustering
    ?scroll=1                  allow scroll-wheel zoom (off by default so the
                               host page scrolls normally over the iframe)     */

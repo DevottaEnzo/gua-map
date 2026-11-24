@@ -1,6 +1,6 @@
 # GUA map
 
-An embeddable Leaflet map of the [Global University Academy](https://www.globaluniversityacademy.org/): member universities, contributing partners, and the refugee camps where teaching happens (Azraq, Za'atari, Kakuma, Cox's Bazar).
+An embeddable Leaflet map of the [Global University Academy](https://www.globaluniversityacademy.org/): partner universities and the teaching locations where courses are delivered.
 
 **Live:** https://devottaenzo.github.io/gua-map/map.html
 
@@ -21,13 +21,13 @@ See `embed-example.html` for a full page.
 
 | Parameter | Effect |
 |---|---|
-| `?type=member` / `contributor` / `teaching` | Show only one category |
+| `?type=member` / `teaching` | Show only one category |
 | `?cluster=0` | Turn off marker clustering |
 | `?scroll=1` | Enable scroll-wheel zoom immediately (otherwise it turns on after a click) |
 
 ## Editing the data
 
-The `MEMBERS`, `CONTRIBUTORS` and `TEACHING` lists are at the top of the script in `map.html`. Each row is `[name, city, lat, lng, url, note]`.
+The `MEMBERS` and `TEACHING` lists are at the top of the script in `map.html`. Each row is `[name, city, lat, lng, url, note]`.
 
 Partner list from globaluniversityacademy.org/about-us (checked 19 Nov 2026). Pins mark main campuses / headquarters and are approximate.
 
