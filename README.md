@@ -31,6 +31,10 @@ The `MEMBERS` and `TEACHING` lists are at the top of the script in `map.html`. E
 
 Partner list from globaluniversityacademy.org/about-us (checked 19 Nov 2026). Pins mark main campuses / headquarters and are approximate.
 
-## Basemap
+## Basemap and licences
 
-Tiles are Esri World Light Gray (no API key). Esri's terms ask commercial sites to use a free ArcGIS Location Platform account; alternatively swap the tile URL in `map.html` for MapTiler, Stadia or Mapbox.
+- **Background map:** [OpenFreeMap](https://openfreemap.org) "Positron" style, rendered with MapLibre GL. Free for any use including commercial, no API key or account, no request limits. The only condition is attribution, which the map shows bottom-right: *OpenFreeMap © OpenMapTiles Data from © OpenStreetMap contributors*. Keep it visible.
+- **Map data:** © OpenStreetMap contributors, under the [ODbL](https://www.openstreetmap.org/copyright).
+- **Libraries:** Leaflet (BSD-2), Leaflet.markercluster (MIT), MapLibre GL JS (BSD-3), maplibre-gl-leaflet (ISC).
+
+OpenFreeMap runs on donations; if GUA relies on it, a small recurring donation helps keep it running.
