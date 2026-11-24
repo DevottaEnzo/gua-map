@@ -7,51 +7,94 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <style>
+  /* Palette and type taken from globaluniversityacademy.org */
   :root {
-    --member: #1f5fbf;
-    --teaching: #d9822b;
-    --text: #1d232b;
-    --muted: #5b6573;
-    --panel: #ffffff;
-    --border: #d9dde3;
+    --ink: #18191c;            /* site's near-black (footer, primary buttons) */
+    --green: #244537;          /* site's info-box accent */
+    --sage: #dee3e1;           /* site's grey-green panels */
+    --muted: rgba(0, 0, 0, .7);/* site's date / meta grey */
+    --font: Helvetica, Arial, sans-serif;
+    --member: var(--ink);
+    --teaching: var(--green);
   }
   html, body { height: 100%; margin: 0; }
-  body { font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); background: #fff; }
-  #map { position: absolute; inset: 0; }
-
-  /* Filter panel */
-  .filter {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 12px; box-shadow: 0 1px 4px rgba(0,0,0,.12); min-width: 180px;
+  body {
+    font: 16px/1.4 var(--font); color: #000; background: #fff;
+    display: flex; flex-direction: column;
   }
-  .filter h2 { font-size: 13px; margin: 0 0 6px; }
-  .filter label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
-  .filter .count { margin-left: auto; padding-left: 14px;color: var(--muted); font-variant-numeric: tabular-nums; }
-  .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); flex: none; }
-  .dot.member { background: var(--member); }
-  .dot.teaching { background: var(--teaching); }
-  .filter input[type=search] {
-    width: 100%; box-sizing: border-box; margin-top: 8px; padding: 6px 8px;
-    border: 1px solid var(--border); border-radius: 6px; font: inherit;
+  #map { flex: 1; min-height: 0; background: #fff; }
+  .leaflet-container { font: 15px/1.4 var(--font); }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* Paler basemap so the pins carry the colour */
+  .base-tiles { opacity: .7; }
+  .label-tiles { opacity: .8; }
+
+  /* Pins */
+  .pin { display: block; border-radius: 50%; box-sizing: border-box; transition: transform .15s ease; }
+  .pin.member   { width: 12px; height: 12px; background: #fff; border: 2.5px solid var(--member); }
+  .pin.teaching { width: 18px; height: 18px; background: var(--teaching); border: 2.5px solid #fff; box-shadow: 0 0 0 1px var(--teaching); }
+  .leaflet-marker-icon:hover .pin,
+  .leaflet-marker-icon:focus .pin { transform: scale(1.35); }
+
+  /* Clusters: flat discs, white number */
+  .cluster {
+    display: flex; align-items: center; justify-content: center; border-radius: 50%;
+    color: #fff; font: 13px/1 var(--font); border: 2px solid #fff; box-sizing: border-box;
+    transition: transform .15s ease;
+  }
+  .cluster.member { background: #fff; color: var(--member); border: 2px solid var(--member); }
+  .cluster.teaching { background: var(--teaching); }
+  .leaflet-marker-icon:hover .cluster { transform: scale(1.12); }
+
+  /* Popups: square, thin black rule, no shadow */
+  .leaflet-popup-content-wrapper { border-radius: 0; box-shadow: none; border: 1px solid var(--ink); }
+  .leaflet-popup-tip-container { margin-top: -1px; }
+  .leaflet-popup-tip { box-shadow: 0 0 0 1px var(--ink); }
+  .leaflet-popup-content { margin: 14px 28px 14px 16px; }
+  .leaflet-container a.leaflet-popup-close-button { color: #000; }
+  .popup .meta { font-size: 13px; color: var(--muted); }
+  .popup h3 { margin: 4px 0 0; font-size: 18px; font-weight: 400; line-height: 1.3; }
+  .popup h3 a { color: #000; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  .popup p { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+
+  /* Zoom control: square, flat */
+  .leaflet-bar { border: 1px solid var(--ink) !important; border-radius: 0; box-shadow: none !important; }
+  .leaflet-bar a, .leaflet-bar a:first-child, .leaflet-bar a:last-child { border-radius: 0 !important; color: var(--ink); }
+  .leaflet-bar a { border-bottom-color: var(--ink); }
+
+  .leaflet-control-attribution { font-size: 10px; color: var(--muted); background: rgba(255,255,255,.75) !important; }
+  .leaflet-control-attribution a { color: var(--muted); }
+
+  /* Key under the map (doubles as the filter) */
+  .key {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px;
+    padding: 12px 2px 2px; background: #fff;
+  }
+  .key button {
+    display: inline-flex; align-items: center; gap: 10px; padding: 4px 0;
+    border: 0; background: none; font: inherit; color: #000; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px;
+  }
+  .key button[aria-pressed="false"] { color: var(--muted); text-decoration-color: transparent; }
+  .key button[aria-pressed="false"] .pin { opacity: .3; }
+  .key .count { color: var(--muted); }
+  .key input[type=search] {
+    margin-left: auto; width: 220px; max-width: 100%; box-sizing: border-box;
+    padding: 7px 10px; border: 1px solid var(--ink); border-radius: 0; font: 15px var(--font);
   }
 
-  /* Popups */
-  .popup h3 { margin: 0 0 2px; font-size: 15px; }
-  .popup .type { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
-  .popup .type.member { color: var(--member); }
-  .popup .type.teaching { color: var(--teaching); }
-  .popup p { margin: 6px 0 0; color: var(--muted); }
-  .popup a { color: var(--member); }
-
-  @media (max-width: 480px) {
-    .filter { min-width: 0; padding: 8px 10px; }
+  @media (max-width: 560px) {
+    body { font-size: 15px; }
+    .key { gap: 6px 18px; }
+    .key input[type=search] { margin-left: 0; width: 100%; }
   }
 </style>
 </head>
 <body>
 <div id="map" role="region" aria-label="Map of Global University Academy partners and teaching locations"></div>
+<div class="key" id="key"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -154,10 +197,12 @@ const map = L.map("map", {
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
   attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> — Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
   maxNativeZoom: 16, maxZoom: 19,
+  className: "base-tiles",
 }).addTo(map);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
   maxNativeZoom: 16, maxZoom: 19,
   pane: "overlayPane",
+  className: "label-tiles",
 }).addTo(map);
 
 // Let users scroll-zoom after clicking into the map.
@@ -167,23 +212,37 @@ map.on("mouseout", () => { if (params.get("scroll") !== "1") map.scrollWheelZoom
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 
 function icon(type) {
+  const s = type === "teaching" ? 22 : 16;
   return L.divIcon({
     className: "",
-    html: `<span class="dot ${type}" style="width:16px;height:16px;display:block"></span>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -10],
+    html: `<span class="pin ${type}"></span>`,
+    iconSize: [s, s],
+    iconAnchor: [s / 2, s / 2],
+    popupAnchor: [0, -s / 2],
   });
 }
 
 function popupHtml(loc) {
+  const title = loc.url
+    ? `<a href="${esc(loc.url)}" target="_blank" rel="noopener">${esc(loc.name)}</a>`
+    : esc(loc.name);
   return `<div class="popup">
-    <div class="type ${loc.type}">${esc(TYPES[loc.type].one)}</div>
-    <h3>${esc(loc.name)}</h3>
-    ${loc.city ? `<div>${esc(loc.city)}</div>` : ""}
+    <div class="meta">${esc(TYPES[loc.type].one)}${loc.city ? ` · ${esc(loc.city)}` : ""}</div>
+    <h3>${title}</h3>
     ${loc.description ? `<p>${esc(loc.description)}</p>` : ""}
-    ${loc.url ? `<p><a href="${esc(loc.url)}" target="_blank" rel="noopener">Website ↗</a></p>` : ""}
   </div>`;
+}
+
+function clusterIcon(type) {
+  return cluster => {
+    const n = cluster.getChildCount();
+    const s = n < 5 ? 28 : n < 15 ? 34 : 40;
+    return L.divIcon({
+      className: "",
+      html: `<span class="cluster ${type}" style="width:${s}px;height:${s}px">${n}</span>`,
+      iconSize: [s, s],
+    });
+  };
 }
 
 // One layer group per type
@@ -191,7 +250,7 @@ const groups = {};
 const markers = [];
 for (const type of Object.keys(TYPES)) {
   groups[type] = useCluster
-    ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40 })
+    ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40, iconCreateFunction: clusterIcon(type) })
     : L.layerGroup();
 }
 
@@ -226,33 +285,29 @@ function fitTo(points, animate = true) {
   map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 6, animate });
 }
 
-// Filter / legend control
-const Filter = L.Control.extend({
-  options: { position: "topright" },
-  onAdd() {
-    const div = L.DomUtil.create("div", "filter");
-    const counts = Object.fromEntries(Object.keys(TYPES).map(t => [t, LOCATIONS.filter(l => l.type === t).length]));
-    div.innerHTML = `<h2>Show</h2>` +
-      Object.entries(TYPES).map(([t, cfg]) => `
-        <label><input type="checkbox" data-type="${t}" ${state.visible.has(t) ? "checked" : ""}>
-          <span class="dot ${t}"></span>${cfg.label}<span class="count">${counts[t]}</span></label>`).join("") +
-      `<input type="search" placeholder="Search name or city…" aria-label="Search locations">`;
-    L.DomEvent.disableClickPropagation(div);
-    L.DomEvent.disableScrollPropagation(div);
-    div.addEventListener("change", e => {
-      const t = e.target.dataset.type;
-      if (!t) return;
-      e.target.checked ? state.visible.add(t) : state.visible.delete(t);
-      render(false);
-    });
-    div.querySelector("input[type=search]").addEventListener("input", e => {
-      state.q = e.target.value.trim();
-      render(!!state.q);
-    });
-    return div;
-  },
-});
-new Filter().addTo(map);
+// Key under the map — each entry toggles its category.
+(function buildKey() {
+  const key = document.getElementById("key");
+  const counts = Object.fromEntries(Object.keys(TYPES).map(t => [t, LOCATIONS.filter(l => l.type === t).length]));
+  key.innerHTML =
+    Object.entries(TYPES).map(([t, cfg]) => `
+      <button type="button" data-type="${t}" aria-pressed="${state.visible.has(t)}">
+        <span class="pin ${t}"></span><span>${cfg.label} <span class="count">(${counts[t]})</span></span>
+      </button>`).join("") +
+    `<input type="search" placeholder="Search name or place" aria-label="Search locations">`;
+  key.addEventListener("click", e => {
+    const b = e.target.closest("button[data-type]");
+    if (!b) return;
+    const t = b.dataset.type;
+    state.visible.has(t) ? state.visible.delete(t) : state.visible.add(t);
+    b.setAttribute("aria-pressed", state.visible.has(t));
+    render(false);
+  });
+  key.querySelector("input[type=search]").addEventListener("input", e => {
+    state.q = e.target.value.trim();
+    render(!!state.q);
+  });
+})();
 
 render(false);
 

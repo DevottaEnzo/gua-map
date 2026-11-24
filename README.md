@@ -7,11 +7,11 @@ An embeddable Leaflet map of the [Global University Academy](https://www.globalu
 ## Embed
 
 ```html
-<div style="position:relative;width:100%;aspect-ratio:16/10;min-height:360px">
+<div style="position:relative;width:100%;aspect-ratio:16/10;min-height:440px">
   <iframe src="https://devottaenzo.github.io/gua-map/map.html"
           title="Map of Global University Academy partners and teaching locations"
           loading="lazy"
-          style="position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:8px"></iframe>
+          style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>
 </div>
 ```
 
