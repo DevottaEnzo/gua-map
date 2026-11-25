@@ -27,9 +27,13 @@ See `embed-example.html` for a full page.
 
 ## Editing the data
 
-The `MEMBERS` and `TEACHING` lists are at the top of the script in `map.html`. Each row is `[name, city, lat, lng, url, note]`.
+Everything is at the top of the script in `map.html`:
 
-Partner list from globaluniversityacademy.org/about-us (checked 19 Nov 2026). Pins mark main campuses / headquarters and are approximate.
+- `MEMBERS`: `[name, place, lat, lng, website]`
+- `COURSES`: course list per university, keyed by the exact name used in `MEMBERS`
+- `TEACHING`: `[site, "Country · Region", lat, lng]`
+
+Partners from globaluniversityacademy.org/about-us; courses from `GUA_Course_Offerings_Simplified.xlsx`.
 
 ## Basemap and licences
 
