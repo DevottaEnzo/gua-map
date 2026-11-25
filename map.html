@@ -50,8 +50,25 @@
   .popup .meta { font-size: 13px; color: var(--muted); }
   .popup h3 { margin: 4px 0 0; font-size: 18px; font-weight: 400; line-height: 1.3; }
   .popup h3 a { color: #000; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-  .popup ul { margin: 10px 0 0; padding: 10px 0 0 18px; border-top: 1px solid #ddd; font-size: 14px; }
-  .popup li + li { margin-top: 3px; }
+  .popup .summary { margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .popup .courses {
+    margin-top: 12px; border-top: 1px solid var(--ink);
+    max-height: 240px; overflow-y: auto; scrollbar-width: thin; padding-right: 6px;
+  }
+  .popup .group { padding-top: 10px; }
+  .popup .group + .group { margin-top: 4px; border-top: 1px solid #e3e3e3; }
+  .popup h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+  .popup ul { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.35; }
+  .popup li { position: relative; padding-left: 14px; }
+  .popup li + li { margin-top: 4px; }
+  .popup li::before {
+    content: ""; position: absolute; left: 0; top: .5em;
+    width: 6px; height: 6px; background: var(--green);
+  }
+  .popup .tag {
+    display: inline-block; margin-left: 4px; padding: 0 5px; vertical-align: 1px;
+    font-size: 11px; line-height: 16px; color: var(--muted); border: 1px solid #c8c8c8;
+  }
 
   .leaflet-bar { border: 1px solid var(--ink) !important; border-radius: 0; box-shadow: none !important; }
   .leaflet-bar a, .leaflet-bar a:first-child, .leaflet-bar a:last-child { border-radius: 0 !important; color: var(--ink); }
@@ -116,7 +133,6 @@ const MEMBERS = [
   ["University of Geneva", "Geneva, Switzerland", 46.1990, 6.1450, "https://www.unige.ch/en/"],
   ["University of Groningen", "Groningen, Netherlands", 53.2194, 6.5630, "https://www.rug.nl/?lang=en"],
   ["University of Hamburg", "Hamburg, Germany", 53.5670, 9.9840, "https://www.uni-hamburg.de/en.html"],
-  ["University of Lausanne", "Lausanne, Switzerland", 46.5225, 6.5840, "https://www.unil.ch/central/en/home.html"],
   ["University of Oslo", "Oslo, Norway", 59.9400, 10.7220, "https://www.uio.no/english/index.html"],
   ["University of Toronto", "Toronto, Canada", 43.6629, -79.3957, "https://www.utoronto.ca/"],
 ];
@@ -156,12 +172,48 @@ const COURSES = {
     "DELF Exam Preparation",
     "Project Management (planned)",
   ],
-  "University of Lausanne": [
-    "Cultural Heritage",
-  ],
   "University of Oslo": [
     "Mental Health and Psychosocial Support",
   ],
+};
+
+// Courses per teaching location, grouped by university
+const SNHU_BA = ["BA Healthcare Management", "BA Communications", "BA Management", "BA Operations and Logistics"];
+const SITE_COURSES = {
+  "Azraq": [
+    ["University of Geneva", ["Community Health", "Children's Rights in the Middle East", "Coursera for Refugees", "Cultural Heritage", "Education in Fragile Contexts", "English Language Pathway", "Media and Communication"]],
+    ["Al Hussein Technical University", ["Business Technology", "Computing and Informatics", "Engineering"]],
+    ["Southern New Hampshire University", ["Introduction to AI"]],
+    ["University of Oslo", ["Mental Health and Psychosocial Support"]],
+  ],
+  "Zaatari": [
+    ["University of Geneva", ["Community Health", "Coursera for Refugees", "Cultural Heritage", "Education in Fragile Contexts", "English Language Pathway", "Media and Communication"]],
+    ["Al Hussein Technical University", ["Business Technology", "Computing and Informatics", "Engineering"]],
+    ["University of Oslo", ["Mental Health and Psychosocial Support"]],
+  ],
+  "Kakuma": [
+    ["Southern New Hampshire University", SNHU_BA],
+    ["University of Geneva", ["Community Health", "Coursera for Refugees", "DELF Exam Preparation", "English Language Pathway", "Media and Communication", "Project Management (planned)"]],
+  ],
+  "Kampala": [
+    ["University of Geneva", ["Coursera for Refugees", "Community Health (planned)", "English Language Pathway (planned)"]],
+  ],
+  "Cox's Bazar": [
+    ["University of Geneva", ["Media and Communication", "Community Health (planned)", "Project Management (planned)"]],
+  ],
+  "Iridimi":   [["University of Geneva", ["Community Health"]]],
+  "Mae Sot":   [["Arizona State University", ["Education in Conflict and Crisis"]]],
+  "Kalobeyei": [["Southern New Hampshire University", SNHU_BA]],
+  "Nairobi":   [["Southern New Hampshire University", SNHU_BA]],
+  "Kigali":    [["Southern New Hampshire University", SNHU_BA]],
+  "Kiziba":    [["Southern New Hampshire University", SNHU_BA]],
+  "Dzaleka":   [["Southern New Hampshire University", SNHU_BA]],
+  "Cape Town": [["Southern New Hampshire University", SNHU_BA]],
+  "Beirut":    [["Southern New Hampshire University", SNHU_BA]],
+  "Tripoli":   [["Southern New Hampshire University", SNHU_BA]],
+  "Bekaa":     [["Southern New Hampshire University", SNHU_BA]],
+  "Arsal":     [["Southern New Hampshire University", SNHU_BA]],
+  "Gaziantep": [["Southern New Hampshire University", SNHU_BA]],
 };
 
 // Teaching locations: [site, country · region, lat, lng]
@@ -189,9 +241,9 @@ const TEACHING = [
 
 const LOCATIONS = [
   ...MEMBERS.map(([name, city, lat, lng, url]) =>
-    ({ type: "member", name, city, lat, lng, url, courses: COURSES[name] || [] })),
+    ({ type: "member", name, city, lat, lng, url, groups: COURSES[name] ? [[null, COURSES[name]]] : [] })),
   ...TEACHING.map(([name, city, lat, lng]) =>
-    ({ type: "teaching", name, city, lat, lng, url: "", courses: [] })),
+    ({ type: "teaching", name, city, lat, lng, url: "", groups: SITE_COURSES[name] || [] })),
 ];
 
 const TYPES = {
@@ -237,17 +289,33 @@ function icon(type) {
   });
 }
 
+function courseItem(c) {
+  const planned = c.endsWith(" (planned)");
+  const name = planned ? c.slice(0, -10) : c;
+  return `<li>${esc(name)}${planned ? ' <span class="tag">Planned</span>' : ""}</li>`;
+}
+
 function popupHtml(loc) {
   const title = loc.url
     ? `<a href="${esc(loc.url)}" target="_blank" rel="noopener">${esc(loc.name)}</a>`
     : esc(loc.name);
-  const courses = loc.courses.length
-    ? `<ul>${loc.courses.map(c => `<li>${esc(c)}</li>`).join("")}</ul>`
-    : "";
+  const all = loc.groups.flatMap(([, cs]) => cs);
+  const n = new Set(all.map(c => c.replace(" (planned)", ""))).size;
+  let summary = "";
+  if (n) {
+    summary = `${n} course${n > 1 ? "s" : ""}`;
+    if (loc.type === "teaching") summary += ` · ${loc.groups.length} universit${loc.groups.length > 1 ? "ies" : "y"}`;
+  }
+  const body = loc.groups.map(([uni, cs]) => `
+    <div class="group">
+      ${uni ? `<h4>${esc(uni)}</h4>` : ""}
+      <ul>${cs.map(courseItem).join("")}</ul>
+    </div>`).join("");
   return `<div class="popup">
     <div class="meta">${esc(TYPES[loc.type].one)} · ${esc(loc.city)}</div>
     <h3>${title}</h3>
-    ${courses}
+    ${summary ? `<div class="summary">${summary}</div>` : ""}
+    ${body ? `<div class="courses">${body}</div>` : ""}
   </div>`;
 }
 
@@ -273,7 +341,7 @@ for (const type of Object.keys(TYPES)) {
 
 for (const loc of LOCATIONS) {
   const m = L.marker([loc.lat, loc.lng], { icon: icon(loc.type), title: loc.name, keyboard: true })
-    .bindPopup(popupHtml(loc), { maxWidth: 320 });
+    .bindPopup(popupHtml(loc), { minWidth: 260, maxWidth: 320 });
   m._loc = loc;
   markers.push(m);
 }
@@ -287,7 +355,7 @@ function render(fit) {
   for (const m of markers) {
     const l = m._loc;
     if (!state.visible.has(l.type)) continue;
-    if (q && !`${l.name} ${l.city} ${l.courses.join(" ")}`.toLowerCase().includes(q)) continue;
+    if (q && !`${l.name} ${l.city} ${l.groups.flat(2).join(" ")}`.toLowerCase().includes(q)) continue;
     groups[l.type].addLayer(m);
     shown.push(m.getLatLng());
   }

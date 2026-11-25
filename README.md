@@ -31,6 +31,7 @@ Everything is at the top of the script in `map.html`:
 
 - `MEMBERS`: `[name, place, lat, lng, website]`
 - `COURSES`: course list per university, keyed by the exact name used in `MEMBERS`
+- `SITE_COURSES`: courses per teaching location, as `[university, [courses]]`; add ` (planned)` to a course name to tag it
 - `TEACHING`: `[site, "Country · Region", lat, lng]`
 
 Partners from globaluniversityacademy.org/about-us; courses from `GUA_Course_Offerings_Simplified.xlsx`.
